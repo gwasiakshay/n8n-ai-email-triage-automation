@@ -1,0 +1,539 @@
+{
+  "name": "AI Email Triage – Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-email-triage",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -560,
+        -48
+      ],
+      "id": "de944223-8ac8-4906-9c9a-7df06330d472",
+      "name": "Webhook",
+      "webhookId": "afa10cd1-9f34-4286-872d-809a753f1d59"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "195ad408-cf70-46e2-a436-f25aa6f68213",
+              "name": "=email_from",
+              "value": "={{$json.body.from}}",
+              "type": "string"
+            },
+            {
+              "id": "b6c6bf45-e4d5-46b6-8f5a-fd51da40b885",
+              "name": "=email_subject",
+              "value": "={{$json.body.subject}}",
+              "type": "string"
+            },
+            {
+              "id": "24ec7ff1-60a9-4f51-ab59-9df124e911de",
+              "name": "=email_body",
+              "value": "={{$json.body.body}}",
+              "type": "string"
+            },
+            {
+              "id": "da350ceb-b63b-4a86-92eb-7eb6b3c9f9db",
+              "name": "=received_at",
+              "value": "={{$json.body.received_at}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -400,
+        -48
+      ],
+      "id": "95b071bb-46bf-4793-adcb-f029c0dc78d4",
+      "name": "Normalize Email Input"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=From: {{$json.email_from}}\nSubject: {{$json.email_subject}}\n\nBody:\n{{$json.email_body}}\n",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an AI system classifying incoming business emails.  You MUST return ONLY a valid JSON object. Do NOT include explanations, markdown, or extra text.  Classify the email using these rules:  - category: one of [\"sales\", \"support\", \"billing\", \"spam\"] - urgency: one of [\"low\", \"medium\", \"high\"] - confidence: number between 0 and 1 - summary: short 1-sentence summary of the email  If unsure, choose the closest category and lower confidence."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -272,
+        -48
+      ],
+      "id": "499933ea-2752-4428-8d2e-99af67e9599f",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "openai/gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "openai/gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 200,
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -272,
+        128
+      ],
+      "id": "99f1b484-c783-4d9e-97ad-530e45f286bd",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "xCFisvyFlgbViAwZ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "08467daf-1222-4d5c-99de-1b14e0da8256",
+              "name": "=category",
+              "value": "={{ JSON.parse($json.text).category }}",
+              "type": "string"
+            },
+            {
+              "id": "48a9cd42-120c-4372-bc7e-6797cb08762d",
+              "name": "urgency",
+              "value": "={{ JSON.parse($json.text).urgency }}",
+              "type": "string"
+            },
+            {
+              "id": "fb564525-88b7-4465-b475-7f475fa2696c",
+              "name": "=confidence",
+              "value": "={{ JSON.parse($json.text).confidence }}\n",
+              "type": "number"
+            },
+            {
+              "id": "cf929eae-8a1d-49fe-bead-24b8f37045d8",
+              "name": "=summary",
+              "value": "={{ JSON.parse($json.text).summary }}",
+              "type": "string"
+            },
+            {
+              "id": "d84e4cd9-031b-4b1c-9fb2-9523047f09bb",
+              "name": "email_from",
+              "value": "={{ $('Normalize Email Input').item.json.email_from }}",
+              "type": "string"
+            },
+            {
+              "id": "81bca7ed-8bd0-4372-9ede-7c900f40b8ea",
+              "name": "received_at",
+              "value": "={{ $('Normalize Email Input').item.json.received_at }}",
+              "type": "string"
+            },
+            {
+              "id": "39d31153-38ab-4c14-aab2-95d111b8c150",
+              "name": "email_subject",
+              "value": "={{ $('Normalize Email Input').item.json.email_subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -16,
+        -48
+      ],
+      "id": "134ae08a-79ab-4afc-9b52-71633742862d",
+      "name": "Parse AI Output"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5b9ebf6d-b6b6-478e-b09e-f2689e4c72a6",
+              "leftValue": "={{$json.confidence}}",
+              "rightValue": 0.6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        96,
+        -160
+      ],
+      "id": "ad909225-a410-4770-9232-c1ca41c7a028",
+      "name": "Confidence Check"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "billing",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "db283e11-1652-4440-85e5-2a34acbd4016"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Billing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "21d143bd-4fca-49d7-8062-462a1186da5d",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "support",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Support"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "af69a01f-fd30-40b2-b0d8-d86926608a8a",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "Sales",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Sales"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ace94923-835c-4a5c-b7f6-c14057583603",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Spam"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -32
+      ],
+      "id": "54d7c24b-bfc4-4950-9693-f832cafe44a9",
+      "name": "Route by Category"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sTXZr08Vk6yxVhArJqUYfVHm7BpcZAPGrYZG8douGnE",
+          "mode": "list",
+          "cachedResultName": "Untitled spreadsheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sTXZr08Vk6yxVhArJqUYfVHm7BpcZAPGrYZG8douGnE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sTXZr08Vk6yxVhArJqUYfVHm7BpcZAPGrYZG8douGnE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "received_at": "={{ $json.received_at }}",
+            "email_from": "={{ $json.email_from }}",
+            "email_subject": "={{ $json.email_subject }}",
+            "summary": "={{ $json.summary }}",
+            "urgency": "={{ $json.urgency }}",
+            "confidence ": "={{ $json.confidence }}",
+            "category": "={{ $json.category }}",
+            "status": "new"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_from",
+              "displayName": "email_from",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_subject",
+              "displayName": "email_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "urgency",
+              "displayName": "urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confidence ",
+              "displayName": "confidence ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        432,
+        -176
+      ],
+      "id": "9bc1d3df-cbd7-42eb-ae4f-05453bf5646c",
+      "name": "Create Ticket",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "HUakYfMsS4UiqTHi",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Email Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Email Input": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Output": {
+      "main": [
+        [
+          {
+            "node": "Confidence Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confidence Check": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Route by Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Category": {
+      "main": [
+        [
+          {
+            "node": "Create Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "37fea7e8-9901-4feb-a91e-24e4e60649e9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "05b54351dc93b0fbc57c8c2740758647288de9a9b3d38c48d418b58110e509a7"
+  },
+  "id": "1dsL0dTI0Tkozu2URjOEP",
+  "tags": []
+}
